@@ -1,0 +1,23 @@
+name: CI
+
+on:
+  push:
+    branches: [dev, main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '18'
+      - name: Instalar dependências (se existir package.json)
+        run: |
+          if [ -f package.json ]; then npm install; fi
+      - name: Rodar testes (se existir package.json)
+        run: |
+          if [ -f package.json ]; then npm test; else echo "Sem testes para rodar"; fi
