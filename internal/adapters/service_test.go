@@ -1,13 +1,11 @@
 package adapters
 
 import (
-	"fmt"
-	"net/http"
-	"net/http/httptest"
 	"testing"
+
+	"github.com/pamelamiranda/eco-link/internal/domain"
 )
 
-// mockCarbonClient implements WebsiteCarbonClient for testing
 type mockCarbonClient struct{}
 
 func (m *mockCarbonClient) GetMetrics(url string) (domain.Metrics, error) {
@@ -17,7 +15,6 @@ func (m *mockCarbonClient) GetMetrics(url string) (domain.Metrics, error) {
 	}, nil
 }
 
-// mockGreenClient implements GreenWebClient for testing
 type mockGreenClient struct{}
 
 func (m *mockGreenClient) CheckGreenHost(url string) (bool, error) {
@@ -34,7 +31,7 @@ func TestService_Analyze(t *testing.T) {
 	}{
 		{
 			name:    "valid url",
-			url:     siteServer.URL,
+			url:     "https://example.com",
 			wantErr: false,
 		},
 		{
