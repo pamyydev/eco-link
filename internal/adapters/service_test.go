@@ -1,40 +1,28 @@
 package adapters
 
 import (
-	"fmt"
-	"net/http"
-	"net/http/httptest"
 	"testing"
+
+	"github.com/pamelamiranda/eco-link/internal/domain"
 )
 
-func setupMockServers(t *testing.T) (*httptest.Server, *httptest.Server, *httptest.Server) {
-	// Mock server for the website being analyzed
-	siteServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.Write([]byte("Mock website content"))
-	}))
+type mockCarbonClient struct{}
 
-	// Mock server for metrics API
-	metricsServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Content-Type", "application/json")
-		fmt.Fprintf(w, `{"site":"%s","carbonPerVisit":0.45,"greenHost":true}`, r.URL.Query().Get("url"))
-	}))
+func (m *mockCarbonClient) GetMetrics(url string) (domain.Metrics, error) {
+	return domain.Metrics{
+		CarbonPerVisit: 0.45,
+		BytesPerVisit:  1000,
+	}, nil
+}
 
-	// Mock server for green host check
-	greenServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Content-Type", "application/json")
-		w.Write([]byte(`{"isGreen":true}`))
-	}))
+type mockGreenClient struct{}
 
-	return siteServer, metricsServer, greenServer
+func (m *mockGreenClient) CheckGreenHost(url string) (bool, error) {
+	return true, nil
 }
 
 func TestService_Analyze(t *testing.T) {
-	siteServer, metricsServer, greenServer := setupMockServers(t)
-	defer siteServer.Close()
-	defer metricsServer.Close()
-	defer greenServer.Close()
-
-	service := NewService(metricsServer.URL, greenServer.URL)
+	service := NewService(&mockCarbonClient{}, &mockGreenClient{})
 
 	tests := []struct {
 		name    string
@@ -43,7 +31,7 @@ func TestService_Analyze(t *testing.T) {
 	}{
 		{
 			name:    "valid url",
-			url:     siteServer.URL,
+			url:     "https://example.com",
 			wantErr: false,
 		},
 		{

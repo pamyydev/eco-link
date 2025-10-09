@@ -1,8 +1,22 @@
 # eco-link
 
-Analyze website sustainability and carbon footprint.
+Analyze website sustainability and carbon footprint. Calculate carbon emissions, page size, and verify green hosting status.
 
-## Structure
+## Tests
+
+```bash
+go test ./... -v  # Run all tests with verbose output
+```
+
+## Features
+
+- Website carbon footprint analysis
+- Page size calculation
+- Green hosting verification
+- Sustainability scoring
+- Recent report tracking
+
+## Quick Start
 
 ```
 ├── cmd/webapp      # Application entrypoint
