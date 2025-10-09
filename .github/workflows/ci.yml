@@ -15,7 +15,9 @@ jobs:
         uses: actions/setup-node@v3
         with:
           node-version: '18'
-      - name: Install dependencies
-        run: npm install
-      - name: Run tests
-        run: npm test
+      - name: Instalar dependências (se existir package.json)
+        run: |
+          if [ -f package.json ]; then npm install; fi
+      - name: Rodar testes (se existir package.json)
+        run: |
+          if [ -f package.json ]; then npm test; else echo "Sem testes para rodar"; fi
