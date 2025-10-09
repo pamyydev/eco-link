@@ -19,19 +19,15 @@ type MetricsResponse struct {
 
 // Service handles website sustainability analysis
 type Service struct {
-	client    *http.Client
-	apiURL    string
-	greenHost string
+	carbonClient WebsiteCarbonClient
+	greenClient  GreenWebClient
 }
 
 // NewService creates a new analysis service
-func NewService(apiURL, greenHostAPI string) *Service {
+func NewService(carbonClient WebsiteCarbonClient, greenClient GreenWebClient) *Service {
 	return &Service{
-		client: &http.Client{
-			Timeout: 10 * time.Second,
-		},
-		apiURL:    apiURL,
-		greenHost: greenHostAPI,
+		carbonClient: carbonClient,
+		greenClient:  greenClient,
 	}
 }
 
@@ -96,26 +92,18 @@ func (s *Service) Analyze(url string) (domain.Report, error) {
 		return domain.Report{}, fmt.Errorf("invalid site URL: %w", err)
 	}
 
-	metrics, err := s.fetchMetrics(url)
+	metrics, err := s.carbonClient.GetMetrics(url)
 	if err != nil {
-		return domain.Report{}, err
+		return domain.Report{}, fmt.Errorf("failed to get carbon metrics: %w", err)
 	}
 
-	bytes, err := s.calculateBytes(url)
+	isGreen, err := s.greenClient.CheckGreenHost(url)
 	if err != nil {
-		return domain.Report{}, err
+		return domain.Report{}, fmt.Errorf("failed to check green host: %w", err)
 	}
 
-	isGreen, err := s.checkGreenHost(url)
-	if err != nil {
-		return domain.Report{}, err
-	}
-
-	report := domain.NewReport(*site, domain.Metrics{
-		CarbonPerVisit: metrics.CarbonPerVisit,
-		BytesPerVisit:  bytes,
-		GreenHost:      isGreen,
-	})
+	metrics.GreenHost = isGreen
+	report := domain.NewReport(*site, metrics)
 
 	return report, nil
 }
