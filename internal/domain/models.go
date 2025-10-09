@@ -31,19 +31,6 @@ func (m Metrics) IsEcoFriendly() bool {
 	return m.GreenHost && m.CarbonPerVisit < 1.0 // less than 1g CO2 per visit
 }
 
-// GetCarbonScore returns a sustainability score from 0 to 100
-func (m Metrics) GetCarbonScore() int {
-	score := 100.0
-	if !m.GreenHost {
-		score -= 30
-	}
-	score -= (m.CarbonPerVisit * 10)
-	if score < 0 {
-		return 0
-	}
-	return int(score)
-}
-
 // Report represents a complete website analysis report
 type Report struct {
 	Site    Site
