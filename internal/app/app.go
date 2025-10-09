@@ -61,19 +61,9 @@ func (c *greenClient) CheckGreenHost(url string) (bool, error) {
 func Run() {
 	fmt.Println("eco-link app iniciado!")
 
-	httpClient := &http.Client{
-		Timeout: 10 * time.Second,
-	}
-
-	// Initialize clients
-	carbon := &carbonClient{
-		client:  httpClient,
-		baseURL: "https://api.websitecarbon.com",
-	}
-	green := &greenClient{
-		client:  httpClient,
-		baseURL: "https://api.green-host.com",
-	}
+	// Initialize HTTP clients with 10s timeout
+	carbonClient := httpclient.NewWebsiteCarbonAdapter(10 * time.Second)
+	greenClient := httpclient.NewGreenWebAdapter(10 * time.Second)
 
 	// Initialize analysis service
 	service := adapters.NewService(carbon, green)
