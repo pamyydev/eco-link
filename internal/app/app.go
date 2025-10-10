@@ -3,10 +3,13 @@ package app
 import (
 	"encoding/json"
 	"fmt"
+	"log"
 	"net/http"
+	"os"
 	"time"
 
 	"github.com/pamelamiranda/eco-link/internal/adapters"
+	"github.com/pamelamiranda/eco-link/internal/adapters/httpclient"
 	"github.com/pamelamiranda/eco-link/internal/domain"
 )
 
@@ -59,26 +62,49 @@ func (c *greenClient) CheckGreenHost(url string) (bool, error) {
 }
 
 func Run() {
-	fmt.Println("eco-link app iniciado!")
+	logger := log.New(os.Stdout, "[eco-link] ", log.LstdFlags)
+	logger.Println("Iniciando aplicação...")
 
-	// Initialize HTTP clients with 10s timeout
-	carbonClient := httpclient.NewWebsiteCarbonAdapter(10 * time.Second)
-	greenClient := httpclient.NewGreenWebAdapter(10 * time.Second)
+	// Get configs from env or use defaults
+	timeout := getEnvDuration("ANALYSIS_TIMEOUT", 10*time.Second)
+	targetURL := getEnvString("TARGET_URL", "https://example.com")
+
+	// Initialize clients
+	carbonClient := httpclient.NewWebsiteCarbonAdapter(timeout)
+	greenClient := httpclient.NewGreenWebAdapter(timeout)
 
 	// Initialize analysis service
-	service := adapters.NewService(carbon, green)
+	service := adapters.NewService(carbonClient, greenClient)
 
-	// Example: Analyze a website
-	report, err := service.Analyze("https://example.com")
+	// Analyze website
+	logger.Printf("Analisando website: %s\n", targetURL)
+	report, err := service.Analyze(targetURL)
 	if err != nil {
-		fmt.Printf("Error analyzing website: %v\n", err)
-		return
+		logger.Fatalf("Erro ao analisar website: %v\n", err)
 	}
 
-	// Print analysis results
-	fmt.Printf("\nAnalysis Results for %s:\n", report.Site.URL)
-	fmt.Printf("Carbon per visit: %.2fg CO2\n", report.Metrics.CarbonPerVisit)
-	fmt.Printf("Bytes per visit: %d bytes\n", report.Metrics.BytesPerVisit)
-	fmt.Printf("Green hosting: %v\n", report.Metrics.GreenHost)
-	fmt.Printf("Eco-friendly: %v\n", report.Metrics.IsEcoFriendly())
+	// Print results
+	logger.Printf("\nResultados da análise para %s:\n", report.Site.URL)
+	logger.Printf("Carbono por visita: %.2fg CO2\n", report.Metrics.CarbonPerVisit)
+	logger.Printf("Bytes por visita: %d bytes\n", report.Metrics.BytesPerVisit)
+	logger.Printf("Hosting verde: %v\n", report.Metrics.GreenHost)
+	logger.Printf("Eco-friendly: %v\n", report.Metrics.IsEcoFriendly())
+}
+
+// getEnvDuration retorna uma duração da variável de ambiente ou valor padrão
+func getEnvDuration(key string, defaultValue time.Duration) time.Duration {
+	if value, exists := os.LookupEnv(key); exists {
+		if duration, err := time.ParseDuration(value); err == nil {
+			return duration
+		}
+	}
+	return defaultValue
+}
+
+// getEnvString retorna uma string da variável de ambiente ou valor padrão
+func getEnvString(key string, defaultValue string) string {
+	if value, exists := os.LookupEnv(key); exists {
+		return value
+	}
+	return defaultValue
 }
