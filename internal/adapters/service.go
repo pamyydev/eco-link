@@ -2,6 +2,7 @@ package adapters
 
 import (
 	"fmt"
+
 	"github.com/pamelamiranda/eco-link/internal/domain"
 	"github.com/pamelamiranda/eco-link/internal/ports"
 )
@@ -21,22 +22,27 @@ func NewService(carbonClient ports.WebsiteCarbonClient, greenClient ports.GreenW
 }
 
 // Analyze fetches and processes sustainability metrics for a given URL
+// Integra verificação de energia renovável via Green Web Foundation
 func (s *Service) Analyze(url string) (domain.Report, error) {
+	// Validar URL do site
 	site, err := domain.NewSite(url)
 	if err != nil {
-		return domain.Report{}, fmt.Errorf("invalid site URL: %w", err)
+		return domain.Report{}, fmt.Errorf("URL inválida: %w", err)
 	}
 
+	// Obter métricas de carbono
 	metrics, err := s.carbonClient.GetMetrics(url)
 	if err != nil {
-		return domain.Report{}, fmt.Errorf("failed to get carbon metrics: %w", err)
+		return domain.Report{}, fmt.Errorf("falha ao obter métricas de carbono: %w", err)
 	}
 
+	// Verificar se o host usa energia renovável via Green Web Foundation
 	isGreen, err := s.greenClient.CheckGreenHost(url)
 	if err != nil {
-		return domain.Report{}, fmt.Errorf("failed to check green host: %w", err)
+		return domain.Report{}, fmt.Errorf("falha ao verificar energia renovável: %w", err)
 	}
 
+	// Integrar verificação green ao relatório final
 	metrics.GreenHost = isGreen
 	report := domain.NewReport(*site, metrics)
 

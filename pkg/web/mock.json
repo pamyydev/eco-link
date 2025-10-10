@@ -1,0 +1,35 @@
+{
+  "carbon": 0.6,
+  "green": false,
+  "bytes": 512000,
+  "examples": {
+    "green_sites": [
+      {
+        "domain": "example.com",
+        "carbon": 0.3,
+        "green": true,
+        "bytes": 256000
+      },
+      {
+        "domain": "github.com",
+        "carbon": 0.4,
+        "green": true,
+        "bytes": 320000
+      }
+    ],
+    "non_green_sites": [
+      {
+        "domain": "google.com",
+        "carbon": 0.8,
+        "green": false,
+        "bytes": 640000
+      },
+      {
+        "domain": "facebook.com",
+        "carbon": 1.2,
+        "green": false,
+        "bytes": 960000
+      }
+    ]
+  }
+}
