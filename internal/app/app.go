@@ -11,100 +11,51 @@ import (
 	"github.com/pamelamiranda/eco-link/internal/adapters"
 	"github.com/pamelamiranda/eco-link/internal/adapters/httpclient"
 	"github.com/pamelamiranda/eco-link/internal/domain"
+	"github.com/pamelamiranda/eco-link/pkg/config"
 )
 
-type carbonClient struct {
-	client  *http.Client
-	baseURL string
+
+type Config struct {
+	Timeout   time.Duration
+	TargetURL string
 }
 
-func (c *carbonClient) GetMetrics(url string) (domain.Metrics, error) {
-	resp, err := c.client.Get(fmt.Sprintf("%s/analyze?url=%s", c.baseURL, url))
-	if err != nil {
-		return domain.Metrics{}, err
+func NewConfig() Config {
+	return Config{
+		Timeout:   config.GetEnvDuration("ANALYSIS_TIMEOUT", 10*time.Second),
+		TargetURL: config.GetEnvString("TARGET_URL", "https://example.com"),
 	}
-	defer resp.Body.Close()
-
-	var result struct {
-		CarbonPerVisit float64 `json:"carbonPerVisit"`
-		BytesPerVisit  int     `json:"bytesPerVisit"`
-	}
-	if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
-		return domain.Metrics{}, err
-	}
-
-	return domain.Metrics{
-		CarbonPerVisit: result.CarbonPerVisit,
-		BytesPerVisit:  result.BytesPerVisit,
-	}, nil
 }
 
-type greenClient struct {
-	client  *http.Client
-	baseURL string
+type Application struct {
+	logger  *log.Logger
+	cfg     Config
+	service *adapters.Service
 }
 
-func (c *greenClient) CheckGreenHost(url string) (bool, error) {
-	resp, err := c.client.Get(fmt.Sprintf("%s/check?url=%s", c.baseURL, url))
-	if err != nil {
-		return false, err
+func NewApplication(logger *log.Logger, cfg Config, service *adapters.Service) *Application {
+	return &Application{
+		logger:  logger,
+		cfg:     cfg,
+		service: service,
 	}
-	defer resp.Body.Close()
-
-	var result struct {
-		IsGreen bool `json:"isGreen"`
-	}
-	if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
-		return false, err
-	}
-
-	return result.IsGreen, nil
 }
 
-func Run() {
-	logger := log.New(os.Stdout, "[eco-link] ", log.LstdFlags)
-	logger.Println("Iniciando aplicação...")
-
-	// Get configs from env or use defaults
-	timeout := getEnvDuration("ANALYSIS_TIMEOUT", 10*time.Second)
-	targetURL := getEnvString("TARGET_URL", "https://example.com")
-
-	// Initialize clients
-	carbonClient := httpclient.NewWebsiteCarbonAdapter(timeout)
-	greenClient := httpclient.NewGreenWebAdapter(timeout)
-
-	// Initialize analysis service
-	service := adapters.NewService(carbonClient, greenClient)
+func (a *Application) Run() {
+	a.logger.Println("Iniciando aplicação...")
 
 	// Analyze website
-	logger.Printf("Analisando website: %s\n", targetURL)
-	report, err := service.Analyze(targetURL)
+	a.logger.Printf("Analisando website: %s\n", a.cfg.TargetURL)
+	report, err := a.service.Analyze(a.cfg.TargetURL)
 	if err != nil {
-		logger.Fatalf("Erro ao analisar website: %v\n", err)
+		a.logger.Fatalf("Erro ao analisar website: %v\n", err)
 	}
 
 	// Print results
-	logger.Printf("\nResultados da análise para %s:\n", report.Site.URL)
-	logger.Printf("Carbono por visita: %.2fg CO2\n", report.Metrics.CarbonPerVisit)
-	logger.Printf("Bytes por visita: %d bytes\n", report.Metrics.BytesPerVisit)
-	logger.Printf("Hosting verde: %v\n", report.Metrics.GreenHost)
-	logger.Printf("Eco-friendly: %v\n", report.Metrics.IsEcoFriendly())
+	a.logger.Printf("\nResultados da análise para %s:\n", report.Site.URL)
+	a.logger.Printf("Carbono por visita: %.2fg CO2\n", report.Metrics.CarbonPerVisit)
+	a.logger.Printf("Bytes por visita: %d bytes\n", report.Metrics.BytesPerVisit)
+	a.logger.Printf("Hosting verde: %v\n", report.Metrics.GreenHost)
+	a.logger.Printf("Eco-friendly: %v\n", report.Metrics.IsEcoFriendly())
 }
 
-// getEnvDuration retorna uma duração da variável de ambiente ou valor padrão
-func getEnvDuration(key string, defaultValue time.Duration) time.Duration {
-	if value, exists := os.LookupEnv(key); exists {
-		if duration, err := time.ParseDuration(value); err == nil {
-			return duration
-		}
-	}
-	return defaultValue
-}
-
-// getEnvString retorna uma string da variável de ambiente ou valor padrão
-func getEnvString(key string, defaultValue string) string {
-	if value, exists := os.LookupEnv(key); exists {
-		return value
-	}
-	return defaultValue
-}
