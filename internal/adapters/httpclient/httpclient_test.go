@@ -10,11 +10,16 @@ import (
 
 func TestWebsiteCarbonAdapter_GetMetrics_Success(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		// Verificar se a URL contém o parâmetro correto
+		if !strings.Contains(r.URL.RawQuery, "url=") {
+			t.Errorf("Expected URL parameter in request, got: %s", r.URL.RawQuery)
+		}
+
 		w.Header().Set("Content-Type", "application/json")
 		w.Write([]byte(`{
 			"bytes": 1000000,
 			"green": true,
-			"gco2e": 0.45,
+			"cO2": 0.42,
 			"rating": "A",
 			"cleanerThan": 0.9
 		}`))
@@ -30,8 +35,8 @@ func TestWebsiteCarbonAdapter_GetMetrics_Success(t *testing.T) {
 		return
 	}
 
-	if metrics.CarbonPerVisit != 0.45 {
-		t.Errorf("GetMetrics() CarbonPerVisit = %v, want %v", metrics.CarbonPerVisit, 0.45)
+	if metrics.CarbonPerVisit != 0.42 {
+		t.Errorf("GetMetrics() CarbonPerVisit = %v, want %v", metrics.CarbonPerVisit, 0.42)
 	}
 }
 
@@ -212,4 +217,98 @@ func TestGreenWebAdapter_CheckGreenHost_InvalidJSON(t *testing.T) {
 	if !strings.Contains(err.Error(), "erro ao decodificar resposta JSON") {
 		t.Errorf("Expected error about JSON decoding, got: %v", err)
 	}
+}
+
+func TestWebsiteCarbonAdapter_CalculateEstimatedCO2(t *testing.T) {
+	adapter := NewWebsiteCarbonAdapter(5 * time.Second)
+
+	tests := []struct {
+		name          string
+		pageSizeBytes int
+		expectedCO2   float64
+	}{
+		{
+			name:          "Small page (100KB)",
+			pageSizeBytes: 102400,
+			expectedCO2:   0.05, // 100KB * 0.0005 = 0.05g CO₂
+		},
+		{
+			name:          "Medium page (1MB)",
+			pageSizeBytes: 1048576,
+			expectedCO2:   0.512, // 1024KB * 0.0005 = 0.512g CO₂
+		},
+		{
+			name:          "Large page (5MB)",
+			pageSizeBytes: 5242880,
+			expectedCO2:   2.56, // 5120KB * 0.0005 = 2.56g CO₂
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := adapter.CalculateEstimatedCO2(tt.pageSizeBytes)
+			if result != tt.expectedCO2 {
+				t.Errorf("CalculateEstimatedCO2() = %v, want %v", result, tt.expectedCO2)
+			}
+		})
+	}
+}
+
+func TestWebsiteCarbonAdapter_GetMetricsWithEstimation(t *testing.T) {
+	t.Run("API returns CO2 data", func(t *testing.T) {
+		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			w.Header().Set("Content-Type", "application/json")
+			w.Write([]byte(`{
+				"bytes": 1000000,
+				"green": true,
+				"cO2": 0.42,
+				"rating": "A",
+				"cleanerThan": 0.9
+			}`))
+		}))
+		defer server.Close()
+
+		adapter := NewWebsiteCarbonAdapter(5 * time.Second)
+		adapter.baseURL = server.URL
+
+		metrics, err := adapter.GetMetricsWithEstimation("https://example.com")
+		if err != nil {
+			t.Errorf("GetMetricsWithEstimation() error = %v", err)
+			return
+		}
+
+		// Deve usar o valor da API, não a estimativa
+		if metrics.CarbonPerVisit != 0.42 {
+			t.Errorf("GetMetricsWithEstimation() CarbonPerVisit = %v, want %v", metrics.CarbonPerVisit, 0.42)
+		}
+	})
+
+	t.Run("API returns zero CO2, should estimate", func(t *testing.T) {
+		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			w.Header().Set("Content-Type", "application/json")
+			w.Write([]byte(`{
+				"bytes": 102400,
+				"green": true,
+				"cO2": 0,
+				"rating": "A",
+				"cleanerThan": 0.9
+			}`))
+		}))
+		defer server.Close()
+
+		adapter := NewWebsiteCarbonAdapter(5 * time.Second)
+		adapter.baseURL = server.URL
+
+		metrics, err := adapter.GetMetricsWithEstimation("https://example.com")
+		if err != nil {
+			t.Errorf("GetMetricsWithEstimation() error = %v", err)
+			return
+		}
+
+		// Deve calcular estimativa: 100KB * 0.0005 = 0.05g CO₂
+		expectedCO2 := 0.05
+		if metrics.CarbonPerVisit != expectedCO2 {
+			t.Errorf("GetMetricsWithEstimation() CarbonPerVisit = %v, want %v", metrics.CarbonPerVisit, expectedCO2)
+		}
+	})
 }

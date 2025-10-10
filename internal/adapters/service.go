@@ -2,6 +2,7 @@ package adapters
 
 import (
 	"fmt"
+
 	"github.com/pamelamiranda/eco-link/internal/domain"
 	"github.com/pamelamiranda/eco-link/internal/ports"
 )
