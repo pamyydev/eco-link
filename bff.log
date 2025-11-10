@@ -1,3 +1,5 @@
 nohup: ignorando entrada
-[eco-link] 2025/11/09 23:11:02 serving frontend static files from frontend/dist
-[eco-link] 2025/11/09 23:11:02 starting BFF server on :8081
+[eco-link] 2025/11/09 23:50:26 serving frontend static files from frontend/dist
+[eco-link] 2025/11/09 23:50:26 starting BFF server on :8081
+[eco-link] 2025/11/09 23:50:26 server error: listen tcp :8081: bind: address already in use
+exit status 1

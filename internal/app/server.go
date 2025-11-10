@@ -32,9 +32,15 @@ func (a *Application) StartServer() error {
 		report, err := a.service.Analyze(urlParam)
 		if err == nil {
 			w.Header().Set("Content-Type", "application/json")
-			json.NewEncoder(w).Encode(report)
+			if jerr := json.NewEncoder(w).Encode(report); jerr != nil {
+				a.logger.Printf("error encoding report json: %v", jerr)
+				http.Error(w, "internal server error", http.StatusInternalServerError)
+			}
 			return
 		}
+
+		// Log original analysis error and continue with fallback assembly
+		a.logger.Printf("service.Analyze error for %s: %v; building fallback report", urlParam, err)
 
 		// Fallback: tentar montar um relatório parcial usando fetchGreen (mock ou API)
 		site, serr := domain.NewSite(urlParam)
@@ -64,8 +70,16 @@ func (a *Application) StartServer() error {
 		}
 
 		fallbackReport := domain.NewReport(*site, metrics)
+		// mark that this is a fallback/partial report so frontend can show a note
+		fallbackReport.Warning = "partial report: website carbon metrics unavailable; values may be estimated or from mock"
+
 		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(fallbackReport)
+		// Ensure we explicitly return 200 with a JSON body (fallback)
+		w.WriteHeader(http.StatusOK)
+		if jerr := json.NewEncoder(w).Encode(fallbackReport); jerr != nil {
+			a.logger.Printf("error encoding fallback report json: %v", jerr)
+			http.Error(w, "internal server error", http.StatusInternalServerError)
+		}
 	})
 
 	mux.HandleFunc("/api/greencheck", func(w http.ResponseWriter, r *http.Request) {

@@ -36,6 +36,8 @@ type Report struct {
 	Site    Site
 	Metrics Metrics
 	Date    time.Time
+	// Warning carries an optional human-readable note when the report is partial or contains fallbacks.
+	Warning string `json:"warning,omitempty"`
 }
 
 // NewReport creates a new report with current timestamp
