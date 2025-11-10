@@ -8,7 +8,7 @@ import (
 	"github.com/pamelamiranda/eco-link/internal/adapters/httpclient"
 )
 
-func main() {
+func ExampleWebsiteCarbon() {
 	// Criar adapter com timeout de 10 segundos
 	adapter := httpclient.NewWebsiteCarbonAdapter(10 * time.Second)
 

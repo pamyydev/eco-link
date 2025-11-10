@@ -21,5 +21,8 @@ func main() {
 
 	application := app.NewApplication(logger, cfg, service)
 
-	application.Run()
+	// Start BFF server (serves API and optional frontend static files)
+	if err := application.StartServer(); err != nil {
+		logger.Fatalf("server error: %v", err)
+	}
 }

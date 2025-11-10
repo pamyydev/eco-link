@@ -3,6 +3,7 @@ package app
 import (
 	"bytes"
 	"log"
+	"os"
 	"strings"
 	"testing"
 	"time"
@@ -72,5 +73,38 @@ func TestApplication_Run(t *testing.T) {
 		if !strings.Contains(output, expected) {
 			t.Errorf("log output does not contain %q", expected)
 		}
+	}
+}
+
+// TestIntegration: fetchGreen against a real API endpoint.
+// To run this test set RUN_INTEGRATION_TESTS=1 in the environment.
+func TestApplication_FetchGreen_Integration(t *testing.T) {
+	if os.Getenv("RUN_INTEGRATION_TESTS") != "1" {
+		t.Skip("skipping integration test; set RUN_INTEGRATION_TESTS=1 to enable")
+	}
+
+	var buf bytes.Buffer
+	logger := log.New(&buf, "", 0)
+
+	cfg := Config{
+		Timeout:   10 * time.Second,
+		TargetURL: "https://example.com",
+	}
+
+	carbonClient := &mockCarbonClient{}
+	greenClient := &mockGreenClient{}
+	service := adapters.NewService(carbonClient, greenClient)
+
+	app := NewApplication(logger, cfg, service)
+
+	ginfo, err := app.fetchGreen(cfg.TargetURL)
+	if err != nil {
+		t.Fatalf("fetchGreen error: %v", err)
+	}
+
+	t.Logf("fetchGreen result: %+v", ginfo)
+	// Basic sanity: carbon should be >= 0 (if present), and green is boolean.
+	if ginfo.Carbon < 0 {
+		t.Errorf("unexpected negative carbon: %v", ginfo.Carbon)
 	}
 }

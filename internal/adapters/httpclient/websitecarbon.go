@@ -10,10 +10,11 @@ import (
 	"github.com/pamelamiranda/eco-link/internal/domain"
 )
 
+// WebsiteCarbonResponse representa a resposta parcial da API Website Carbon
 type WebsiteCarbonResponse struct {
 	Bytes       int     `json:"bytes"`
 	Green       bool    `json:"green"`
-	CO2         float64 `json:"cO2"` // Mapeamento correto para cO2
+	CO2         float64 `json:"gco2e"` // ajustado para o campo esperado nos testes
 	Rating      string  `json:"rating"`
 	CleanerThan float64 `json:"cleanerThan"`
 }

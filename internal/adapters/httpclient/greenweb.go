@@ -44,10 +44,9 @@ type GreenWebAdapter struct {
 }
 
 func NewGreenWebAdapter(timeout time.Duration) *GreenWebAdapter {
-	// Detectar se deve usar mock baseado na variável de ambiente
-	useMock := os.Getenv("ENV") == "dev" || os.Getenv("GREENWEB_MOCK") == "true"
+	// Detectar se deve usar mock baseado nas variáveis de ambiente
+	useMock := os.Getenv("ANALYSIS_ENV") == "dev" || os.Getenv("ENV") == "dev" || os.Getenv("GREENWEB_MOCK") == "true"
 
-	// Caminho para o arquivo de mock
 	mockPath := filepath.Join("pkg", "web", "mock.json")
 
 	return &GreenWebAdapter{
@@ -72,6 +71,11 @@ func NewGreenWebAdapterWithMock(timeout time.Duration, mockPath string) *GreenWe
 	}
 }
 
+// SetBaseURL permite sobrescrever a baseURL do adapter (útil em exemplos/testes)
+func (g *GreenWebAdapter) SetBaseURL(u string) {
+	g.baseURL = u
+}
+
 // CheckGreenHost verifica se o domínio usa energia renovável
 // Retorna true se o host é green, false caso contrário
 func (g *GreenWebAdapter) CheckGreenHost(targetURL string) (bool, error) {
@@ -84,7 +88,7 @@ func (g *GreenWebAdapter) CheckGreenHost(targetURL string) (bool, error) {
 	isGreen, err := g.checkGreenHostWithAPI(targetURL)
 	if err != nil {
 		// Se a API falhar, tentar usar mock como fallback
-		fmt.Printf("⚠️  API Green Web falhou, usando mock como fallback: %v\n", err)
+		fmt.Printf("API Green Web falhou, usando mock como fallback: %v\n", err)
 		return g.checkGreenHostWithMock(targetURL)
 	}
 
@@ -160,11 +164,28 @@ func (g *GreenWebAdapter) loadMockData() (*MockData, error) {
 	// Tentar carregar do caminho relativo primeiro
 	data, err := os.ReadFile(g.mockPath)
 	if err != nil {
-		// Se falhar, tentar caminho absoluto
-		absPath, _ := filepath.Abs(g.mockPath)
-		data, err = os.ReadFile(absPath)
+		// Se falhar, tentar resolver subindo diretórios (útil quando o teste é executado
+		// a partir do diretório do pacote: internal/adapters/httpclient).
+		// Tentamos até 6 níveis acima.
+		var tryErr error
+		cur := "."
+		for i := 0; i < 6; i++ {
+			tryPath := filepath.Join(cur, g.mockPath)
+			data, tryErr = os.ReadFile(tryPath)
+			if tryErr == nil {
+				err = nil
+				break
+			}
+			cur = filepath.Join(cur, "..")
+		}
+
+		// Ainda não achou, tentar caminho absoluto final
 		if err != nil {
-			return nil, fmt.Errorf("não foi possível carregar arquivo mock '%s': %w", g.mockPath, err)
+			absPath, _ := filepath.Abs(g.mockPath)
+			data, err = os.ReadFile(absPath)
+			if err != nil {
+				return nil, fmt.Errorf("não foi possível carregar arquivo mock '%s': %w", g.mockPath, err)
+			}
 		}
 	}
 

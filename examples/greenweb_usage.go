@@ -9,8 +9,8 @@ import (
 	"github.com/pamelamiranda/eco-link/internal/adapters/httpclient"
 )
 
-func main() {
-	fmt.Println("🌱 Exemplo de uso da API Green Web Foundation")
+func ExampleGreenweb() {
+	fmt.Println("Exemplo de uso da API Green Web Foundation")
 	fmt.Println("================================================")
 
 	// Exemplo 1: Modo produção (API real)
@@ -27,13 +27,13 @@ func main() {
 	for _, url := range urls {
 		isGreen, err := adapter.CheckGreenHost(url)
 		if err != nil {
-			log.Printf("❌ Erro ao verificar %s: %v", url, err)
+			log.Printf("Erro ao verificar %s: %v", url, err)
 		} else {
-			status := "🔴 Não Green"
+			status := "Não Green"
 			if isGreen {
-				status = "🟢 Green"
+				status = "Green"
 			}
-			fmt.Printf("🌐 %s: %s\n", url, status)
+			fmt.Printf("%s: %s\n", url, status)
 		}
 	}
 
@@ -45,13 +45,13 @@ func main() {
 	for _, url := range urls {
 		isGreen, err := adapterDev.CheckGreenHost(url)
 		if err != nil {
-			log.Printf("❌ Erro ao verificar %s: %v", url, err)
+			log.Printf("Erro ao verificar %s: %v", url, err)
 		} else {
-			status := "🔴 Não Green"
+			status := "Não Green"
 			if isGreen {
-				status = "🟢 Green"
+				status = "Green"
 			}
-			fmt.Printf("🌐 %s: %s (Mock)\n", url, status)
+			fmt.Printf("%s: %s (Mock)\n", url, status)
 		}
 	}
 
@@ -63,13 +63,13 @@ func main() {
 	for _, url := range urls {
 		isGreen, err := adapterMock.CheckGreenHost(url)
 		if err != nil {
-			log.Printf("❌ Erro ao verificar %s: %v", url, err)
+			log.Printf("Erro ao verificar %s: %v", url, err)
 		} else {
-			status := "🔴 Não Green"
+			status := "Não Green"
 			if isGreen {
-				status = "🟢 Green"
+				status = "Green"
 			}
-			fmt.Printf("🌐 %s: %s (Mock Forçado)\n", url, status)
+			fmt.Printf("%s: %s (Mock Forçado)\n", url, status)
 		}
 	}
 
@@ -80,13 +80,13 @@ func main() {
 	for _, url := range urls {
 		isGreen, err := adapterCustom.CheckGreenHost(url)
 		if err != nil {
-			log.Printf("❌ Erro ao verificar %s: %v", url, err)
+			log.Printf("Erro ao verificar %s: %v", url, err)
 		} else {
-			status := "🔴 Não Green"
+			status := "Não Green"
 			if isGreen {
-				status = "🟢 Green"
+				status = "Green"
 			}
-			fmt.Printf("🌐 %s: %s (Mock Customizado)\n", url, status)
+			fmt.Printf("%s: %s (Mock Customizado)\n", url, status)
 		}
 	}
 
@@ -96,24 +96,24 @@ func main() {
 
 	// Simular falha da API (URL inválida)
 	adapterFallback := httpclient.NewGreenWebAdapter(10 * time.Second)
-	adapterFallback.baseURL = "https://api-inexistente.com" // URL que vai falhar
+	adapterFallback.SetBaseURL("https://api-inexistente.com") // usar setter público
 
 	isGreen, err := adapterFallback.CheckGreenHost("https://example.com")
 	if err != nil {
-		log.Printf("❌ Erro: %v", err)
+		log.Printf("Erro: %v", err)
 	} else {
-		status := "🔴 Não Green"
+		status := "Não Green"
 		if isGreen {
-			status = "🟢 Green"
+			status = "Green"
 		}
-		fmt.Printf("🌐 Fallback funcionou: %s\n", status)
+		fmt.Printf("Fallback funcionou: %s\n", status)
 	}
 
-	fmt.Println("\n🎯 Resumo das funcionalidades:")
-	fmt.Println("✅ Chama API real da Green Web Foundation")
-	fmt.Println("✅ Retorna booleano (true/false) para energia renovável")
-	fmt.Println("✅ Integrado ao relatório final")
-	fmt.Println("✅ Usa mock local quando API falha ou ENV=dev")
-	fmt.Println("✅ Permite desenvolvimento offline")
-	fmt.Println("✅ Fallback automático para mock em caso de erro")
+	fmt.Println("\nResumo das funcionalidades:")
+	fmt.Println("- Chama API real da Green Web Foundation")
+	fmt.Println("- Retorna booleano (true/false) para energia renovável")
+	fmt.Println("- Integrado ao relatório final")
+	fmt.Println("- Usa mock local quando API falha ou ENV=dev")
+	fmt.Println("- Permite desenvolvimento offline")
+	fmt.Println("- Fallback automático para mock em caso de erro")
 }
